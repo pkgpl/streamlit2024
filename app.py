@@ -3,7 +3,7 @@ from openai import OpenAI
 
 api_key = st.text_input("OpenAI API Key", type='password')
 
-prompt = st.text_area("Prompt")
+query = st.text_area("Prompt")
 answer = ''
 
 if st.button("Generate"):
