@@ -2,6 +2,7 @@ import streamlit as st
 
 @st.cache_data
 def ask_gpt(prompt):
+    client = st.session_state['openai_client']
     response = client.chat.completions.create(
         model = "gpt-4o-mini",
         messages = [

@@ -2,6 +2,7 @@ import streamlit as st
 
 @st.cache_data
 def generate_image(prompt):
+    client = st.session_state['openai_client']
     response = client.images.generate(
         model="dall-e-3",
         prompt=prompt,
