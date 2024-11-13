@@ -1,7 +1,10 @@
 import streamlit as st
 from openai import OpenAI
 
-api_key = st.text_input("OpenAI API Key", key='api_key', type='password')
+api_key = st.text_input("OpenAI API Key", 
+                        key='api_key', 
+                        value=st.session_state.get('api_key',''),
+                        type='password')
 
 if 'openai_client' in st.session_state:
     client = st.session_state['openai_client']
