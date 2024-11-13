@@ -13,8 +13,8 @@ def ask_gpt(prompt):
 
 client = st.session_state.get('openai_client', None)
 if client is None:
-    st.markdown("[API Key를 입력하세요.](/Setting)")
-    st.stop()
+    if st.button("API Key를 입력하세요."):
+        st.switch_page("pages/1_Setting.py")
 
 st.header("Ask GPT")
 
