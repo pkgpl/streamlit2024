@@ -1,0 +1,27 @@
+import streamlit as st
+
+@st.cache_data
+def generate_image(prompt):
+    response = client.images.generate(
+        model="dall-e-3",
+        prompt=prompt,
+        n=1,
+        size="1024x1024"
+    )
+    return response.data[0].url
+
+client = st.session_state.get('openai_client', None)
+if client is None:
+    st.markdown("[API Key를 입력하세요.](/Setting)")
+    st.stop()
+
+st.header("Generate Images")
+
+prompt = st.text_area("Prompt", key='image_prompt')
+
+image_url = ''
+if st.button("Generate"):
+    image_url = generate_image(prompt)
+
+if image_url:
+    st.markdown(f"![{prompt}]({image_url})")
