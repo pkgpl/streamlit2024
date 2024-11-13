@@ -19,7 +19,8 @@ if client is None:
 
 st.header("Ask GPT")
 
-prompt = st.text_area("Prompt", key='chat_prompt')
+prompt = st.text_area("Prompt", value=st.session_state.get('chat_prompt',''))
+st.session_state['chat_prompt'] = prompt
 
 answer = ''
 if st.button("Generate"):

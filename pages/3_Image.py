@@ -18,7 +18,8 @@ if client is None:
 
 st.header("Generate Images")
 
-prompt = st.text_area("Prompt", key='image_prompt')
+prompt = st.text_area("Prompt", value=st.session_state.get('image_prompt',''))
+st.session_state['image_prompt'] = prompt
 
 image_url = ''
 if st.button("Generate"):
