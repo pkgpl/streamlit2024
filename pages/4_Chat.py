@@ -20,7 +20,31 @@ if client is None:
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
+if "assistant" not in st.session_state:
+    st.session_state.assistant = client.beta.assistants.create(
+        name="Assistant",
+        model="gpt-4o-mini",
+        tools=[
+            {"type":"code_interpreter"}
+        ]
+    )
+
+if "thread" not in st.session_state:
+    thread = client.beta.threads.create()
+
+
 st.header("Chat")
+
+col1, col2 = st.columns(2)
+with col1:
+    if st.button("Clear (Start a new chat)"):
+        del st.session_state.messages
+        del st.session_state.thread
+with col2:
+    if st.button("Leave"):
+        del st.session_state.messages
+        del st.session_state.thread
+        del st.session_state.assistant
 
 # previous chat
 for msg in st.session_state.messages:
@@ -32,7 +56,27 @@ if prompt := st.chat_input("What is up?"):
     st.chat_message("user").markdown(prompt)
     st.session_state.messages.append({"role":"user", "content":prompt})
 
-    response = f"Echo: {prompt}"
+    # assistant api
+    thread = st.session_state.thread
+    assistant = st.session_state.assistant
+
+    client.beta.threads.messages.create(
+        thread_id=thread.id,
+        role="user",
+        content=prompt
+    )
+    run = client.beta.threads.runs.create_and_poll(
+        thread_id=thread.id,
+        assistant_id=assistant.id
+    )
+    if run.status == 'completed':
+        api_response = client.beta.threads.messages.list(
+            thread_id=thread.id,
+            run_id=run.id,
+            limit=1
+        )
+
+    response = api_response.data[0].content[0].text.value
 
     with st.chat_message("assistant"):
         st.markdown(response)
