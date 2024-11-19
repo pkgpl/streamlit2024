@@ -30,7 +30,7 @@ if "assistant" not in st.session_state:
     )
 
 if "thread" not in st.session_state:
-    thread = client.beta.threads.create()
+    st.session_state.thread = client.beta.threads.create()
 
 
 st.header("Chat")
