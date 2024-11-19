@@ -143,10 +143,11 @@ if prompt := st.chat_input("What is up?"):
             run_id=run.id,
             limit=1
         )
-        response_dict = json.loads(api_response.data[0].content[0].text.value)
-        response = response_dict['response']
-        if 'image_url' in response_dict:
-            images.append(response_dict['image_url'])
+        #response_dict = json.loads(api_response.data[0].content[0].text.value)
+        #response = response_dict['response']
+        response = api_response.data[0].content[0].text.value
+        #if 'image_url' in response_dict:
+        #    images.append(response_dict['image_url'])
 
 
     # assistant api - tool call info
