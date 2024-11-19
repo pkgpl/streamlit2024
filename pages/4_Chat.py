@@ -56,7 +56,7 @@ if prompt := st.chat_input("What is up?"):
     st.chat_message("user").markdown(prompt)
     st.session_state.messages.append({"role":"user", "content":prompt})
 
-    # assistant api
+    # assistant api - get response
     thread = st.session_state.thread
     assistant = st.session_state.assistant
 
@@ -75,9 +75,24 @@ if prompt := st.chat_input("What is up?"):
             run_id=run.id,
             limit=1
         )
-
     response = api_response.data[0].content[0].text.value
+
+    # assistant api - tool call info
+    run_steps = client.beta.threads.runs.steps.list(
+        thread_id=thread.id,
+        run_id=run.id
+    )
+    codes = []
+    for run_step in reversed(run_steps.data):
+        if run_step.step_details.type == 'tool_calls':
+            for tool_call in run_step.step_details.tool_calls:
+                if tool_call.type == 'code_interpreter':
+                    codes.append(tool_call.code_interpreter.input)
 
     with st.chat_message("assistant"):
         st.markdown(response)
+        if codes:
+            with st.expander("Show codes"):
+                for code in codes:
+                    st.code(code, language='python')
     st.session_state.messages.append({"role":"assistant","content":response})
