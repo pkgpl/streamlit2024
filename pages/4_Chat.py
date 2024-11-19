@@ -38,11 +38,11 @@ st.header("Chat")
 col1, col2 = st.columns(2)
 with col1:
     if st.button("Clear (Start a new chat)"):
-        del st.session_state.messages
+        st.session_state.messages = []
         del st.session_state.thread
 with col2:
     if st.button("Leave"):
-        del st.session_state.messages
+        st.session_state.messages = []
         del st.session_state.thread
         del st.session_state.assistant
 
