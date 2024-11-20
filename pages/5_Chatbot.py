@@ -436,6 +436,9 @@ if "chatbot_messages" not in st.session_state:
 
 st.header("국립부경대학교 도서관 챗봇")
 
+for msg in st.session_state.chatbot_messages:
+    show_message(msg)
+
 if prompt := st.chat_input("What is up?"):
     msg = {"role":"user", "content":prompt}
     show_message(msg)
