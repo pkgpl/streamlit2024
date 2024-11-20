@@ -1,63 +1,53 @@
 import streamlit as st
 import json
-
-@st.cache_data
-def generate_image(prompt):
-    client = st.session_state['openai_client']
-    response = client.images.generate(
-        model="dall-e-3",
-        prompt=prompt,
-        n=1,
-        size="1024x1024"
-    )
-    return response.data[0].url
+from lib.tools import generate_image, SCHEMA_GENERATE_IMAGE
 
 FUNCTION_TOOLS = [
-    {
-        "type":"function",
-        "function": {
-            "name": "generate_image",
-            "description":"Generate an image using Dall-E-3 and return the image url",
-            "parameters": {
-                "type":"object",
-                "properties":{
-                    "prompt": {
-                        "type":"string",
-                        "description":"image generation prompt"
-                    }
-                },
-                "required":["prompt"],
-                "additionalProperties": False
-            },
-            "strict": True
-        }
-    }
+    SCHEMA_GENERATE_IMAGE
 ]
 
-response_format={
-    "type":"json_schema",
-    "json_schema":{
-        "description": "Assistant Output",
-        "name": "Output",
-        "schema": {
-            "type": "object",
-            "description": "Assistant Output",
-            "properties": {
-                "response": {
-                    "description": "Assistant response",
-                    "type": "string"
-                },
-                "image_url": {
-                    "description": "Generated image url",
-                    "type": "string"
-                }
-            },
-            "additionalProperties": False,
-            "required": [ "response" ]
-        },
-    "strict": True
-    }
-}
+# response_format={
+#     "type":"json_schema",
+#     "json_schema":{
+#         "description": "Assistant Output",
+#         "name": "Output",
+#         "schema": {
+#             "type": "object",
+#             "description": "Assistant Output",
+#             "properties": {
+#                 "response": {
+#                     "description": "Assistant response",
+#                     "type": "string"
+#                 },
+#                 "image_url": {
+#                     "description": "Generated image url",
+#                     "type": "string"
+#                 }
+#             },
+#             "additionalProperties": False,
+#             "required": [ "response" ]
+#         },
+#     "strict": True
+#     }
+# }
+
+def show_message(msg):
+    if msg['role'] == 'user' or msg['role'] == 'assistant':
+        with st.chat_message(msg['role']):
+            st.markdown(msg["content"])
+    elif msg['role'] == 'code':
+        with st.chat_message('assistant'):
+            with st.expander("Show codes"):
+                st.code(msg["content"], language='python')
+    elif msg['role'] == 'image_url':
+        with st.chat_message('assistant'):
+            st.markdown(f"![]({msg['content']})")
+    elif msg['role'] == 'image_file':
+        with st.chat_message('assistant'):
+            st.image(msg['content'])
+
+
+# Initialization
 
 client = st.session_state.get('openai_client', None)
 if client is None:
@@ -79,6 +69,8 @@ if "thread" not in st.session_state:
     st.session_state.thread = client.beta.threads.create()
 
 
+# Page
+
 st.header("Chat")
 
 col1, col2 = st.columns(2)
@@ -94,8 +86,7 @@ with col2:
 
 # previous chat
 for msg in st.session_state.messages:
-    with st.chat_message(msg['role']):
-        st.markdown(msg["content"])
+    show_message(msg)
 
 # user prompt, assistant response
 if prompt := st.chat_input("What is up?"):
@@ -136,39 +127,39 @@ if prompt := st.chat_input("What is up?"):
             tool_outputs=tool_outputs
         )
             
-    images = []
     if run.status == 'completed':
         api_response = client.beta.threads.messages.list(
             thread_id=thread.id,
             run_id=run.id,
-            limit=1
+            order="asc"
         )
-        #response_dict = json.loads(api_response.data[0].content[0].text.value)
-        #response = response_dict['response']
-        response = api_response.data[0].content[0].text.value
-        #if 'image_url' in response_dict:
-        #    images.append(response_dict['image_url'])
-
+        for data in api_response.data:
+            for content in data.content:
+                if content.type == 'text':
+                    response = content.text.value
+                    msg = {"role":"assistant","content":response}
+                elif content.type == 'image_url':
+                    url = content.image_url.url
+                    msg = {"role":"image_url","content":url}
+                elif content.type == 'image_file':
+                    file_id = content.image_file.file_id
+                    # load file
+                    image_data = client.files.content(file_id)
+                    msg = {"role":"image_file","content":image_data.read()}
+                show_message(msg)
+                st.session_state.messages.append(msg)
 
     # assistant api - tool call info
     run_steps = client.beta.threads.runs.steps.list(
         thread_id=thread.id,
-        run_id=run.id
+        run_id=run.id,
+        order='asc'
     )
-    codes = []
-    for run_step in reversed(run_steps.data):
+    for run_step in run_steps.data:
         if run_step.step_details.type == 'tool_calls':
             for tool_call in run_step.step_details.tool_calls:
                 if tool_call.type == 'code_interpreter':
-                    codes.append(tool_call.code_interpreter.input)
-
-    with st.chat_message("assistant"):
-        st.markdown(response)
-        if codes:
-            with st.expander("Show codes"):
-                for code in codes:
-                    st.code(code, language='python')
-        if images:
-            for image_url in images:
-                st.markdown(f"![]({image_url})")
-    st.session_state.messages.append({"role":"assistant","content":response})
+                    code = tool_call.code_interpreter.input
+                    msg = {"role":"code","content":code}
+                    show_message(msg)
+                    st.session_state.messages.append(msg)
