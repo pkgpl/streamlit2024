@@ -103,3 +103,5 @@ if prompt := st.chat_input("What is up?"):
                     msg = {"role":"assistant","content":response}
                     show_message(msg)
                     st.session_state.chatpdf_messages.append(msg)
+    else:
+        st.error(f"Response not completed: {run.status}")
