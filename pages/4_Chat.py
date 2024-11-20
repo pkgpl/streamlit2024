@@ -2,34 +2,13 @@ import streamlit as st
 import json
 from lib.tools import generate_image, SCHEMA_GENERATE_IMAGE
 
-FUNCTION_TOOLS = [
+TOOL_FUNCTIONS = {
+    "generate_image": generate_image
+}
+
+FUNCTION_TOOLS_SCHEMA = [
     SCHEMA_GENERATE_IMAGE
 ]
-
-# response_format={
-#     "type":"json_schema",
-#     "json_schema":{
-#         "description": "Assistant Output",
-#         "name": "Output",
-#         "schema": {
-#             "type": "object",
-#             "description": "Assistant Output",
-#             "properties": {
-#                 "response": {
-#                     "description": "Assistant response",
-#                     "type": "string"
-#                 },
-#                 "image_url": {
-#                     "description": "Generated image url",
-#                     "type": "string"
-#                 }
-#             },
-#             "additionalProperties": False,
-#             "required": [ "response" ]
-#         },
-#     "strict": True
-#     }
-# }
 
 def show_message(msg):
     if msg['role'] == 'user' or msg['role'] == 'assistant':
@@ -62,7 +41,7 @@ if "assistant" not in st.session_state:
     st.session_state.assistant = client.beta.assistants.create(
         name="Assistant",
         model="gpt-4o-mini",
-        tools=[{"type":"code_interpreter"}] + FUNCTION_TOOLS
+        tools=[{"type":"code_interpreter"}] + FUNCTION_TOOLS_SCHEMA
     )
 
 if "thread" not in st.session_state:
@@ -90,8 +69,9 @@ for msg in st.session_state.messages:
 
 # user prompt, assistant response
 if prompt := st.chat_input("What is up?"):
-    st.chat_message("user").markdown(prompt)
-    st.session_state.messages.append({"role":"user", "content":prompt})
+    msg = {"role":"user", "content":prompt}
+    show_message(msg)
+    st.session_state.messages.append(msg)
 
     # assistant api - get response
     thread = st.session_state.thread
@@ -113,8 +93,9 @@ if prompt := st.chat_input("What is up?"):
         for tool in tool_calls:
             func_name = tool.function.name
             kwargs = json.loads(tool.function.arguments)
-            if func_name == 'generate_image':
-                output = generate_image(**kwargs)
+            output = None
+            if func_name in TOOL_FUNCTIONS:
+                output = TOOL_FUNCTIONS[func_name](**kwargs)
             tool_outputs.append(
                 {
                     "tool_call_id": tool.id,
@@ -127,6 +108,7 @@ if prompt := st.chat_input("What is up?"):
             tool_outputs=tool_outputs
         )
             
+    # assistant messages - text, image_url, image_file
     if run.status == 'completed':
         api_response = client.beta.threads.messages.list(
             thread_id=thread.id,
@@ -149,7 +131,7 @@ if prompt := st.chat_input("What is up?"):
                 show_message(msg)
                 st.session_state.messages.append(msg)
 
-    # assistant api - tool call info
+    # code interpreter tool call info
     run_steps = client.beta.threads.runs.steps.list(
         thread_id=thread.id,
         run_id=run.id,
