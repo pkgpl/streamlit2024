@@ -61,7 +61,7 @@ with col2:
     if st.button("Leave"):
         st.session_state.chatpdf_messages = []
         del st.session_state.chatpdf_thread
-        del st.session_state.chapdf_assistant
+        del st.session_state.chatpdf_assistant
         client.beta.vector_stores.delete(st.session_state.vector_store.id)
         del st.session_state.vector_store
 
